@@ -17,7 +17,7 @@ In order to compile `nss-docker` you will need the C headers for `libc`. These c
 (including Ubuntu) with the `libc6-dev` package and in Redhat variants with the `glibc-headers` package.
 
 ```bash
-git clone https://github.com/costela/nss-docker
+git clone https://github.com/azazar/nss-docker
 cd nss-docker
 go mod download
 sudo make install
