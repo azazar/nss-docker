@@ -1,0 +1,81 @@
+name: Release .deb
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+jobs:
+  build-and-release:
+    name: Build .deb and create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Build library
+        run: make build
+
+      - name: Prepare package layout
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKGDIR="${PWD}/pkgroot"
+          LIBNAME="libnss_docker"
+          LIB_VERSIONED="${LIBNAME}-${VERSION}.so"
+
+          mkdir -p "$PKGDIR/DEBIAN" \
+                   "$PKGDIR/lib/x86_64-linux-gnu" \
+                   "$PKGDIR/usr/include" \
+                   "$PKGDIR/etc"
+
+          # Copy built files
+          cp "${LIBNAME}.so" "$PKGDIR/lib/x86_64-linux-gnu/$LIB_VERSIONED"
+          (cd "$PKGDIR/lib/x86_64-linux-gnu" && ln -sf "$LIB_VERSIONED" "libnss_docker.so.2")
+          if [ -f "${LIBNAME}.h" ]; then cp "${LIBNAME}.h" "$PKGDIR/usr/include/"; fi
+          if [ -f "config.json" ]; then cp "config.json" "$PKGDIR/etc/nss_docker.json"; fi
+
+          chmod 755 "$PKGDIR/lib/x86_64-linux-gnu/$LIB_VERSIONED"
+          chmod 644 "$PKGDIR/etc/nss_docker.json" || true
+
+          cat > "$PKGDIR/DEBIAN/control" <<-EOF
+          Package: libnss-docker
+          Version: ${VERSION}
+          Section: libs
+          Priority: optional
+          Architecture: amd64
+          Maintainer: nss-docker <noreply@github.com>
+          Description: NSS module that resolves Docker container names to IPs
+          EOF
+
+      - name: Build .deb
+        run: dpkg-deb --build pkgroot "nss-docker_${VERSION}_amd64.deb"
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset (.deb)
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: nss-docker_${VERSION}_amd64.deb
+          asset_name: nss-docker_${VERSION}_amd64.deb
+          asset_content_type: application/vnd.debian.binary-package
