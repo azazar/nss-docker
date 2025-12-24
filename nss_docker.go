@@ -32,8 +32,9 @@ import (
 	"strings"
 	"unsafe"
 
-	"docker.io/go-docker"
-	"docker.io/go-docker/api/types"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 )
 
 func init() {
@@ -73,13 +74,13 @@ func _nss_docker_gethostbyname3_r(name *C.char, af C.int, result *C.struct_hoste
 		return unavailable(errnop, herrnop)
 	}
 
-	client, err := docker.NewEnvClient()
+	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return unavailable(errnop, herrnop)
 	}
-	defer client.Close()
+	defer dockerClient.Close()
 
-	_, addresses, err := queryDockerForName(client, queryName)
+	_, addresses, err := queryDockerForName(dockerClient, queryName)
 	if err != nil {
 		return unavailable(errnop, herrnop)
 	}
@@ -152,12 +153,12 @@ func notfound(errnop *C.int, herrnop *C.int) C.enum_nss_status {
 }
 
 type dockerClienter interface {
-	ContainerList(context.Context, types.ContainerListOptions) ([]types.Container, error)
+	ContainerList(context.Context, container.ListOptions) ([]types.Container, error)
 	ContainerInspect(context.Context, string) (types.ContainerJSON, error)
 }
 
-func queryDockerForName(client dockerClienter, search string) ([]string, []string, error) {
-	containers, err := client.ContainerList(context.Background(), types.ContainerListOptions{})
+func queryDockerForName(dockerClient dockerClienter, search string) ([]string, []string, error) {
+	containers, err := dockerClient.ContainerList(context.Background(), container.ListOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -189,7 +190,7 @@ func queryDockerForName(client dockerClienter, search string) ([]string, []strin
 
 		// ContainerList does not return all info, like Aliases
 		// see: curl --unix-socket /var/run/docker.sock http://localhost/containers/json
-		containerJSON, err := client.ContainerInspect(context.Background(), container.ID)
+		containerJSON, err := dockerClient.ContainerInspect(context.Background(), container.ID)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -22,14 +22,14 @@ import (
 	"reflect"
 	"testing"
 
-	"docker.io/go-docker/api/types/network"
-
-	"docker.io/go-docker/api/types"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 )
 
 type testClient struct{}
 
-func (testClient) ContainerList(_ context.Context, _ types.ContainerListOptions) ([]types.Container, error) {
+func (testClient) ContainerList(_ context.Context, _ container.ListOptions) ([]types.Container, error) {
 	return []types.Container{
 		{
 			ID:     "service1",
