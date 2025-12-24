@@ -23,8 +23,15 @@ go mod download
 sudo make install
 ```
 
-- add `docker` to the `hosts` line in `/etc/nsswitch.conf`. The entry should be placed before other network
-backends like `dns` or `mdns`, to ensure faster resolution.
+The `make install` command will:
+- Build and install the NSS library to `/lib/x86_64-linux-gnu/`
+- Install the configuration file to `/etc/nss_docker.json`
+- Add `docker` to the `hosts` line in `/etc/nsswitch.conf`
+
+To uninstall:
+```bash
+sudo make uninstall
+```
 
 ⚠ *Note*: `nss-docker` requires access to the docker daemon as the user performing the queries (commonly achieved by adding
 the user in question to the `docker` group). This has security implications, since any user with access to the docker daemon can trivially bypass local permission restrictions.
