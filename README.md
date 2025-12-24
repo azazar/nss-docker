@@ -16,10 +16,13 @@ Additionally, `nss-docker` supports `docker-compose` by optionally organizing co
 In order to compile `nss-docker` you will need the C headers for `libc`. These can be installed in Debian variants
 (including Ubuntu) with the `libc6-dev` package and in Redhat variants with the `glibc-headers` package.
 
-- `go get -d github.com/costela/nss-docker`
-- `cd $(go env GOPATH)/src/github.com/costela/nss-docker`
-- `dep ensure -vendor-only` (you may need to install [dep](https://github.com/golang/dep))
-- `sudo make install`
+```bash
+git clone https://github.com/costela/nss-docker
+cd nss-docker
+go mod download
+sudo make install
+```
+
 - add `docker` to the `hosts` line in `/etc/nsswitch.conf`. The entry should be placed before other network
 backends like `dns` or `mdns`, to ensure faster resolution.
 
